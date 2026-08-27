@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حضور و غیاب + تشویق و تنبیه</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .attendance-box { background: #0d1117; border-radius: 15px; padding: 15px; margin-top: 15px; }
+        .date-selector {
+            display: flex; gap: 10px; align-items: center; background: #161b22;
+            padding: 10px 15px; border-radius: 10px; margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .date-selector input { background: #0d1117; border: 1px solid #30363d; color: #c9d1d9; padding: 8px; border-radius: 5px; flex: 1; min-width: 100px; }
+        .student-row {
+            display: flex; justify-content: space-between; align-items: center;
+            background: #0d1117; padding: 10px; border-bottom: 1px solid #30363d;
+        }
+        .student-row:last-child { border-bottom: none; }
+        .student-name { font-weight: bold; flex: 1; color: #c9d1d9; }
+        .status-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .action-btn { padding: 6px 12px; border-radius: 6px; border: 1px solid #30363d; background: #161b22; color: #c9d1d9; cursor: pointer; transition: 0.2s; font-size: 14px; }
+        .action-btn:hover { transform: scale(1.05); border-color: #c9d1d9; }
+        .btn-present.active { background: #238636; color: white; border-color: #238636; }
+        .btn-absent.active { background: #da3633; color: white; border-color: #da3633; }
+        .btn-excused.active { background: #d29922; color: white; border-color: #d29922; }
+        .btn-positive { background: #1f6feb; color: white; }
+        .btn-negative { background: #f85149; color: white; }
+        .empty-state { text-align: center; color: #8b949e; padding: 30px 0; }
+        .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
+            <h2 style="margin:0; color:#d29922;">📋 حضور و غیاب</h2>
+            <div class="header-actions">
+                <button onclick="window.location.href='teacher_home.html'" style="width:auto; padding:8px 15px; background:#21262d;">🔙 بازگشت</button>
+                <button onclick="logout()" style="width:auto; padding:8px 15px; background:#da3633;">خروج</button>
+            </div>
+        </div>
+
+        <div style="background:#161b22; padding:10px 15px; border-radius:10px; border-right: 4px solid #d29922; margin-bottom:20px;">
+            <strong id="currentClassNameDisplay">کلاس: بارگذاری...</strong>
+        </div>
+
+        <div class="date-selector">
+            <label style="font-weight:bold; color:#8b949e;">📅 تاریخ:</label>
+            <input type="date" id="attendanceDate">
+            <button onclick="loadData()" style="width:auto; padding:8px 20px; background:#58a6ff; font-size:14px;">بارگذاری</button>
+        </div>
+
+        <div class="attendance-box">
+            <div id="studentsListContainer">
+                <div class="empty-state">هیچ دانش‌آموزی در این کلاس وجود ندارد.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ترتیب صحیح: Firebase اول، بعد script.js، بعد کدهای سفارشی -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let activeClassId = localStorage.getItem('activeClassId');
+        let teacherId = localStorage.getItem('teacherId');
+
+        window.onload = function() {
+            if (!activeClassId || localStorage.getItem('userRole') !== 'teacher') {
+                window.location.href = 'teacher_home.html'; return;
+            }
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = today;
+            loadData();
+        };
+
+        function loadData() {
+            const school = getSchoolData();
+            const teacher = school.teachers.find(t => t.id === teacherId);
+            const cls = teacher.classes.find(c => c.id === activeClassId);
+            document.getElementById('currentClassNameDisplay').innerText = cls ? cls.name : "نامشخص";
+
+            const students = cls ? cls.students : [];
+            const container = document.getElementById('studentsListContainer');
+
+            if (students.length === 0) {
+                container.innerHTML = `<div class="empty-state">هیچ دانش‌آموزی در این کلاس وجود ندارد.</div>`;
+                return;
+            }
+
+            const date = document.getElementById('attendanceDate').value;
+            if (!date) { alert("لطفاً تاریخ را انتخاب کنید."); return; }
+
+            let attendanceData = getAttendanceByClass(activeClassId);
+            let scoresData = JSON.parse(localStorage.getItem(`scores_${activeClassId}`)) || {};
+
+            let html = `<div style="background:#0d1117; border-radius:10px; overflow:hidden;">`;
+            
+            students.forEach(s => {
+                const key = `${s.id}_${date}`;
+                const status = attendanceData[key] || 'empty';
+                const score = scoresData[key] || 0;
+
+                let btnsHtml = '';
+
+                // دکمه حاضر
+                if (status === 'present') {
+                    btnsHtml += `<button class="action-btn btn-present active" onclick="setStatus('${s.id}','${date}','empty')" title="حاضر">✅</button>`;
+                } else {
+                    btnsHtml += `<button class="action-btn btn-present" onclick="setStatus('${s.id}','${date}','present')" title="ثبت حاضر">✅</button>`;
+                }
+
+                // دکمه غایب
+                if (status === 'absent') {
+                    btnsHtml += `<button class="action-btn btn-absent active" onclick="setStatus('${s.id}','${date}','empty')" title="غایب">❌</button>`;
+                } else {
+                    btnsHtml += `<button class="action-btn btn-absent" onclick="setStatus('${s.id}','${date}','absent')" title="ثبت غایب">❌</button>`;
+                }
+
+                // دکمه مرخصی
+                if (status === 'excused') {
+                    btnsHtml += `<button class="action-btn btn-excused active" onclick="setStatus('${s.id}','${date}','empty')" title="مرخصی">🟡</button>`;
+                } else {
+                    btnsHtml += `<button class="action-btn btn-excused" onclick="setStatus('${s.id}','${date}','excused')" title="ثبت مرخصی">🟡</button>`;
+                }
+
+                // دکمه‌های تشویق و تنبیه
+                let scoreText = '';
+                if (score > 0) scoreText = `<span style="color:#1f6feb; font-weight:bold;">+${score}</span>`;
+                else if (score < 0) scoreText = `<span style="color:#f85149; font-weight:bold;">${score}</span>`;
+                else scoreText = '<span style="color:#8b949e;">0</span>';
+
+                btnsHtml += `
+                    <button class="action-btn btn-positive" onclick="addScore('${s.id}','${date}',1)">➕</button>
+                    <button class="action-btn btn-negative" onclick="addScore('${s.id}','${date}',-1)">➖</button>
+                `;
+
+                html += `
+                    <div class="student-row">
+                        <div class="student-name">${s.name}</div>
+                        <div class="status-actions">
+                            <div style="display:flex; gap:4px;">${btnsHtml}</div>
+                            <span style="min-width:30px; text-align:center;">${scoreText}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        function setStatus(studentId, date, newStatus) {
+            let data = getAttendanceByClass(activeClassId);
+            const key = `${studentId}_${date}`;
+            data[key] = newStatus;
+            saveAttendanceByClass(activeClassId, data);
+            loadData();
+        }
+
+        function addScore(studentId, date, change) {
+            let data = JSON.parse(localStorage.getItem(`scores_${activeClassId}`)) || {};
+            const key = `${studentId}_${date}`;
+            data[key] = (data[key] || 0) + change;
+            localStorage.setItem(`scores_${activeClassId}`, JSON.stringify(data));
+            loadData();
+        }
+    </script>
+</body>
+</html>

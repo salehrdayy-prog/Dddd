@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پنل مدیریت معلم</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .class-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #161b22;
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btn-danger-small {
+            background: #da3633;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .student-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #0d1117;
+            padding: 8px 12px;
+            border-radius: 5px;
+            border: 1px solid #30363d;
+        }
+        .bulk-box {
+            margin-top: 15px;
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px dashed #30363d;
+        }
+        .link-btn {
+            width: auto;
+            padding: 8px 15px;
+            font-size: 13px;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0; color:#58a6ff;">👨‍🏫 پنل مدیریت</h2>
+            <button onclick="logout()" style="width:auto; padding:8px 15px; background:#da3633;">خروج</button>
+        </div>
+
+        <!-- نمای کلی داشبورد -->
+        <div class="glass-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h3 style="color:#58a6ff; margin:0;">📊 نمای کلی</h3>
+                <span id="schoolNameDisplay" style="color:#8b949e; font-size:14px;"></span>
+            </div>
+            <div style="display:flex; gap:15px; flex-wrap:wrap; margin-top:15px;">
+                <div style="flex:1; min-width:100px; text-align:center; background:#0d1117; padding:15px; border-radius:10px;">
+                    <div id="statClasses" style="font-size:24px; font-weight:bold; color:#58a6ff;">0</div>
+                    <div style="font-size:12px; color:#8b949e;">کلاس‌ها</div>
+                </div>
+                <div style="flex:1; min-width:100px; text-align:center; background:#0d1117; padding:15px; border-radius:10px;">
+                    <div id="statStudents" style="font-size:24px; font-weight:bold; color:#3fb950;">0</div>
+                    <div style="font-size:12px; color:#8b949e;">دانش‌آموزان</div>
+                </div>
+                <div style="flex:1; min-width:100px; text-align:center; background:#0d1117; padding:15px; border-radius:10px;">
+                    <div id="statAvg" style="font-size:24px; font-weight:bold; color:#d29922;">0</div>
+                    <div style="font-size:12px; color:#8b949e;">میانگین نمره</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- بخش لینک‌های سریع به صفحات جدید -->
+        <div class="glass-box">
+            <h3 style="color:#3fb950; margin-bottom:10px;">⚡ امکانات پیشرفته</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button onclick="window.location.href='assignments.html'" class="link-btn" style="background:#1f6feb;">📝 تکلیف و آزمون</button>
+                <button onclick="window.location.href='events.html'" class="link-btn" style="background:#d29922;">📅 رویدادها</button>
+                <button onclick="window.location.href='report_card.html'" class="link-btn" style="background:#238636;">🎓 کارنامه ترمی</button>
+            </div>
+        </div>
+
+        <!-- بخش چت داخلی (یادداشت سریع) -->
+        <div class="glass-box">
+            <h3 style="color:#f0883e; margin-bottom:10px;">💬 یادداشت داخلی معلم‌ها</h3>
+            <div style="display:flex; gap:10px;">
+                <input type="text" id="internalNote" placeholder="مثلاً: کلاس فردا زنگ اول تعطیل است..." style="flex:1;">
+                <button onclick="saveInternalNote()" class="gradient-btn" style="width:auto;">ثبت</button>
+            </div>
+            <div id="noteDisplay" style="margin-top:10px; color:#c9d1d9; font-size:14px; background:#161b22; padding:10px; border-radius:8px;"></div>
+        </div>
+
+        <!-- بخش کلاس‌ها -->
+        <div style="background:#0d1117; padding:20px; border-radius:12px; margin-bottom:25px;">
+            <h3 style="color:#d29922; margin-bottom:15px;">📁 کلاس‌های من</h3>
+            <div id="classListContainer"><p style="color:#8b949e;">در حال بارگذاری...</p></div>
+
+            <div style="margin-top:20px; border-top:1px solid #30363d; padding-top:20px;">
+                <h4 style="color:#8b949e;">افزودن کلاس جدید</h4>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                    <div style="flex:1; min-width:120px;">
+                        <label style="font-size:12px;">نام کلاس</label>
+                        <input type="text" id="newClassName" placeholder="مثلاً: دهم ریاضی">
+                    </div>
+                    <div style="flex:1; min-width:120px;">
+                        <label style="font-size:12px;">نام درس</label>
+                        <input type="text" id="newSubjectName" placeholder="مثلاً: تفکر و سواد">
+                    </div>
+                    <button onclick="createNewClass()" style="width:auto; padding:8px 20px; background:#238636;">ساختن کلاس</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- بخش مدیریت دانش‌آموزان -->
+        <div style="background:#0d1117; padding:20px; border-radius:12px;" id="studentManagerSection">
+            <h3 style="color:#f0883e; margin-bottom:15px;">👥 مدیریت دانش‌آموزان</h3>
+            <p style="color:#8b949e; font-size:14px;">ابتدا یک کلاس را از لیست بالا انتخاب کنید.</p>
+
+            <div id="studentManagerContent" style="display:none;">
+                <hr style="border-color:#30363d; margin:15px 0;">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;">
+                    <div style="flex:1; min-width:150px;">
+                        <label style="font-size:12px;">نام دانش‌آموز</label>
+                        <input type="text" id="newStudentName" placeholder="نام و نام خانوادگی">
+                    </div>
+                    <button onclick="addStudentToClassBtn()" style="width:auto; padding:8px 20px; background:#1f6feb;">افزودن دانش‌آموز</button>
+                </div>
+
+                <div class="bulk-box">
+                    <label style="font-size:13px; color:#58a6ff;">⚡ افزودن گروهی (اسم‌ها را با کاما یا خط جدید جدا کنید)</label>
+                    <textarea id="bulkStudents" style="width:100%; margin-top:10px; height:60px; background:#161b22; color:white; border:1px solid #30363d; border-radius:5px; padding:10px;" placeholder="علی، زهرا، محمد، فاطمه..."></textarea>
+                    <button onclick="addBulkStudents()" class="gradient-btn" style="margin-top:10px; width:100%;">🚀 افزودن گروهی</button>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; margin-top:15px; gap:10px;">
+                    <button onclick="regenerateAllPasswords()" style="width:auto; padding:5px 15px; background:#d29922; font-size:12px;">🔄 تولید رمز جدید برای همه</button>
+                </div>
+
+                <div id="studentListDisplay" style="margin-top:15px; padding:10px; background:#161b22; border-radius:8px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ترتیب صحیح اسکریپت‌ها: Firebase اول، بعد script.js، بعد کدهای سفارشی -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="script.js"></script>
+    <script>
+        let currentTeacherId = localStorage.getItem('teacherId');
+        let selectedClassId = null;
+
+        window.onload = function() {
+            if (!currentTeacherId || localStorage.getItem('userRole') !== 'teacher') {
+                window.location.href = 'index.html';
+                return;
+            }
+            loadClasses();
+            loadDashboard();
+        };
+
+        // ============================================
+        // توابع نمای کلی و چت داخلی
+        // ============================================
+        function loadDashboard() {
+            const school = getSchoolData();
+            const teacher = school.teachers.find(t => t.id === currentTeacherId);
+            
+            document.getElementById('schoolNameDisplay').innerText = teacher ? teacher.schoolName : "";
+            
+            let totalStudents = 0;
+            let totalClasses = teacher ? teacher.classes.length : 0;
+            
+            teacher.classes.forEach(cls => {
+                totalStudents += cls.students.length;
+            });
+
+            document.getElementById('statClasses').innerText = totalClasses;
+            document.getElementById('statStudents').innerText = totalStudents;
+            
+            let avgSum = 0;
+            let avgCount = 0;
+            teacher.classes.forEach(cls => {
+                const grades = getGradesByClass(cls.id);
+                grades.forEach(g => { avgSum += g.grade; avgCount++; });
+            });
+            
+            document.getElementById('statAvg').innerText = avgCount > 0 ? (avgSum / avgCount).toFixed(2) : "0";
+            
+            const note = localStorage.getItem('internal_note');
+            if (note) {
+                document.getElementById('noteDisplay').innerText = "📌 " + note;
+            }
+        }
+
+        function saveInternalNote() {
+            const note = document.getElementById('internalNote').value.trim();
+            if (!note) { alert("یادداشت را وارد کنید!"); return; }
+            localStorage.setItem('internal_note', note);
+            document.getElementById('noteDisplay').innerText = "📌 " + note;
+            document.getElementById('internalNote').value = '';
+            alert("یادداشت برای همه معلم‌ها ثبت شد.");
+        }
+
+        // ============================================
+        // توابع مدیریت کلاس‌ها
+        // ============================================
+        function loadClasses() {
+            const school = getSchoolData();
+            const teacher = school.teachers.find(t => t.id === currentTeacherId);
+            const container = document.getElementById('classListContainer');
+            if (!teacher || teacher.classes.length === 0) {
+                container.innerHTML = `<p style="color:#8b949e;">هنوز کلاسی ایجاد نکرده‌اید.</p>`;
+                return;
+            }
+            let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+            teacher.classes.forEach(cls => {
+                html += `
+                    <div class="class-row">
+                        <div>
+                            <span style="font-weight:bold; color:#c9d1d9;">📂 ${cls.name}</span>
+                            <span style="color:#8b949e; font-size:12px; margin-right:10px;">(${cls.subject || 'درس نامشخص'})</span>
+                            <span style="color:#8b949e; font-size:12px; margin-right:10px;">${cls.students.length} دانش‌آموز</span>
+                        </div>
+                        <div style="display:flex; gap:5px; flex-wrap:wrap;">
+                            <button onclick="selectClass('${cls.id}')" style="width:auto; padding:4px 12px; background:#58a6ff; font-size:12px;">مدیریت</button>
+                            <button onclick="goToGrades('${cls.id}')" style="width:auto; padding:4px 12px; background:#238636; font-size:12px;">نمرات</button>
+                            <button onclick="goToAttendance('${cls.id}')" style="width:auto; padding:4px 12px; background:#d29922; font-size:12px;">حضور</button>
+                            <button onclick="deleteClass('${cls.id}')" class="btn-danger-small">🗑️ حذف</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            container.innerHTML = html;
+        }
+
+        function createNewClass() {
+            const className = document.getElementById('newClassName').value.trim();
+            const subjectName = document.getElementById('newSubjectName').value.trim();
+            
+            if (!className) { alert("لطفاً نام کلاس را وارد کنید!"); return; }
+            if (!subjectName) { alert("لطفاً نام درس را وارد کنید!"); return; }
+            
+            const school = getSchoolData();
+            const teacher = school.teachers.find(t => t.id === currentTeacherId);
+            
+            teacher.classes.push({ 
+                id: Date.now().toString(), 
+                name: className, 
+                subject: subjectName, 
+                students: [] 
+            });
+            
+            saveSchoolData(school);
+            document.getElementById('newClassName').value = '';
+            document.getElementById('newSubjectName').value = '';
+            loadClasses();
+            loadDashboard();
+        }
+
+        // ============================================
+        // توابع مدیریت دانش‌آموزان
+        // ============================================
+        function selectClass(classId) {
+            selectedClassId = classId;
+            document.getElementById('studentManagerContent').style.display = 'block';
+            const school = getSchoolData();
+            const teacher = school.teachers.find(t => t.id === currentTeacherId);
+            const cls = teacher.classes.find(c => c.id === classId);
+            
+            if (!cls || cls.students.length === 0) {
+                document.getElementById('studentListDisplay').innerHTML = `<p style="color:#8b949e; font-size:13px;">هیچ دانش‌آموزی در این کلاس نیست.</p>`;
+                return;
+            }
+            
+            let listHtml = `<div style="display:flex; flex-direction:column; gap:5px;">`;
+            cls.students.forEach(s => {
+                listHtml += `
+                    <div class="student-row">
+                        <div>
+                            <span style="font-weight:bold; color:#c9d1d9;">${s.name}</span>
+                            <span style="color:#8b949e; font-size:12px; margin-right:10px;">رمز: <span style="color:#58a6ff; font-weight:bold;">${s.password}</span></span>
+                        </div>
+                        <button onclick="deleteStudent('${s.id}')" style="width:auto; padding:2px 10px; background:#da3633; font-size:11px;">❌ حذف</button>
+                    </div>
+                `;
+            });
+            listHtml += `</div>`;
+            document.getElementById('studentListDisplay').innerHTML = listHtml;
+        }
+
+        function addStudentToClassBtn() {
+            if (!selectedClassId) { alert("ابتدا یک کلاس را انتخاب کنید!"); return; }
+            const name = document.getElementById('newStudentName').value.trim();
+            if (!name) { alert("نام دانش‌آموز را وارد کنید!"); return; }
+
+            const newPass = addStudentToClass(currentTeacherId, selectedClassId, name);
+            if (newPass) {
+                alert(`دانش‌آموز ${name} با رمز "${newPass}" اضافه شد.`);
+                document.getElementById('newStudentName').value = '';
+                selectClass(selectedClassId);
+                loadClasses();
+                loadDashboard();
+            }
+        }
+
+        function addBulkStudents() {
+            if (!selectedClassId) { alert("ابتدا یک کلاس را انتخاب کنید!"); return; }
+            const bulkText = document.getElementById('bulkStudents').value.trim();
+            if (!bulkText) { alert("لیست دانش‌آموزان را وارد کنید!"); return; }
+
+            const names = bulkText.split(/[\n,،]+/).map(n => n.trim()).filter(n => n);
+            let addedCount = 0;
+
+            names.forEach(name => {
+                let newId = Date.now().toString() + Math.floor(Math.random() * 1000);
+                let newPass = generateRandomPassword();
+
+                const school = getSchoolData();
+                const teacher = school.teachers.find(t => t.id === currentTeacherId);
+                if (!teacher) return;
+                const cls = teacher.classes.find(c => c.id === selectedClassId);
+                if (!cls) return;
+
+                let isUnique = false;
+                while (!isUnique) {
+                    const exists = cls.students.find(s => s.password === newPass);
+                    if (!exists) isUnique = true;
+                    else newPass = generateRandomPassword();
+                }
+
+                cls.students.push({ 
+                    id: newId, 
+                    name: name, 
+                    password: newPass 
+                });
+                saveSchoolData(school);
+                addedCount++;
+            });
+
+            alert(`${addedCount} دانش‌آموز با موفقیت اضافه شدند!`);
+            document.getElementById('bulkStudents').value = '';
+            selectClass(selectedClassId);
+            loadClasses();
+            loadDashboard();
+        }
+
+        function deleteStudent(studentId) {
+            if (confirm("آیا مطمئن هستید که می‌خواهید این دانش‌آموز را حذف کنید؟")) {
+                deleteStudentFromClass(currentTeacherId, selectedClassId, studentId);
+                selectClass(selectedClassId);
+                loadClasses();
+                loadDashboard();
+            }
+        }
+
+        function regenerateAllPasswords() {
+            if (!confirm("این کار رمزهای تمام دانش‌آموزان این کلاس را تغییر می‌دهد! آیا مطمئن هستید؟")) return;
+            const list = regeneratePasswordsForClass(currentTeacherId, selectedClassId);
+            if (list) {
+                alert("رمزهای جدید با موفقیت تولید شد.");
+                selectClass(selectedClassId);
+            }
+        }
+
+        function deleteClass(classId) {
+            if (!confirm("آیا مطمئن هستید که می‌خواهید این کلاس را به همراه تمام دانش‌آموزان و نمراتش حذف کنید؟ این عمل قابل بازگشت نیست!")) return;
+            
+            const school = getSchoolData();
+            const teacher = school.teachers.find(t => t.id === currentTeacherId);
+            
+            teacher.classes = teacher.classes.filter(c => c.id !== classId);
+            saveSchoolData(school);
+            
+            localStorage.removeItem(`grades_${classId}`);
+            localStorage.removeItem(`attendance_${classId}`);
+            
+            if (selectedClassId === classId) {
+                selectedClassId = null;
+                document.getElementById('studentManagerContent').style.display = 'none';
+            }
+
+            loadClasses();
+            loadDashboard();
+            alert("کلاس و تمام اطلاعات مربوطه با موفقیت حذف شد.");
+        }
+
+        // ============================================
+        // توابع رفتن به صفحات دیگر
+        // ============================================
+        function goToGrades(classId) { localStorage.setItem('activeClassId', classId); window.location.href = 'dashboard.html'; }
+        function goToAttendance(classId) { localStorage.setItem('activeClassId', classId); window.location.href = 'attendance.html'; }
+    </script>
+</body>
+</html>

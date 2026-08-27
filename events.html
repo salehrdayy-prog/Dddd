@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>رویدادها</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .box {
+            background: #0d1117;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 1px solid #30363d;
+        }
+        .event-item {
+            background: #161b22;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+            margin-bottom: 10px;
+        }
+        .event-item h4 { color: #d29922; margin: 0 0 5px 0; }
+        .event-item p { color: #8b949e; font-size: 13px; margin: 0 0 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 style="margin:0; color:#d29922;">📅 رویدادها</h2>
+            <div style="display:flex; gap:10px;">
+                <button onclick="window.location.href='teacher_home.html'" style="width:auto; padding:8px 15px; background:#21262d;">🔙 بازگشت</button>
+                <button onclick="logout()" style="width:auto; padding:8px 15px; background:#da3633;">خروج</button>
+            </div>
+        </div>
+
+        <!-- بخش ثبت رویداد -->
+        <div class="box">
+            <h3 style="color:#238636;">➕ ثبت رویداد</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <input type="text" id="eventTitle" placeholder="عنوان رویداد (مثلاً: جلسه اولیا)" style="flex:1;">
+                <input type="date" id="eventDate" style="flex:1;">
+                <input type="text" id="eventClass" placeholder="کلاس (اختیاری)" style="flex:1;">
+            </div>
+            <textarea id="eventDescription" placeholder="توضیحات رویداد..." style="width:100%; height:60px; margin-top:10px;"></textarea>
+            <div style="margin-top:10px;">
+                <button onclick="createEvent()" style="width:auto; padding:8px 20px; background:#238636;">ثبت رویداد</button>
+            </div>
+        </div>
+
+        <!-- لیست رویدادها -->
+        <div class="box">
+            <h3 style="color:#d29922;">📋 لیست رویدادها</h3>
+            <div id="eventsList"></div>
+        </div>
+    </div>
+
+    <!-- ترتیب صحیح: Firebase اول، بعد script.js، بعد کدهای سفارشی -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="script.js"></script>
+    <script>
+        window.onload = function() {
+            if (localStorage.getItem('userRole') !== 'teacher') {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // خواندن رویدادها از Firebase
+            loadEvents();
+        };
+
+        function loadEvents() {
+            // خواندن رویدادها از Firebase
+            db.ref('events').on('value', (snapshot) => {
+                const events = [];
+                snapshot.forEach((childSnapshot) => {
+                    events.push({ id: childSnapshot.key, ...childSnapshot.val() });
+                });
+
+                const display = document.getElementById('eventsList');
+
+                if (events.length === 0) {
+                    display.innerHTML = '<p style="color:#8b949e;">هیچ رویدادی ثبت نشده است.</p>';
+                    return;
+                }
+
+                let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+                events.forEach((item) => {
+                    html += `
+                        <div class="event-item">
+                            <h4>${item.title}</h4>
+                            <p>تاریخ: ${item.date} | کلاس: ${item.className || 'همه کلاس‌ها'}</p>
+                            <p>${item.description || 'بدون توضیحات'}</p>
+                            <button onclick="deleteEvent('${item.id}')" style="width:auto; padding:4px 10px; background:#da3633; font-size:12px;">حذف</button>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                display.innerHTML = html;
+            });
+        }
+
+        function createEvent() {
+            const title = document.getElementById('eventTitle').value.trim();
+            const date = document.getElementById('eventDate').value;
+            const className = document.getElementById('eventClass').value.trim();
+            const description = document.getElementById('eventDescription').value.trim();
+
+            if (!title || !date) {
+                alert("لطفاً عنوان و تاریخ رویداد را وارد کنید!");
+                return;
+            }
+
+            // ذخیره در Firebase
+            db.ref('events').push({
+                title: title,
+                date: date,
+                className: className,
+                description: description
+            });
+
+            document.getElementById('eventTitle').value = '';
+            document.getElementById('eventDate').value = '';
+            document.getElementById('eventClass').value = '';
+            document.getElementById('eventDescription').value = '';
+            loadEvents();
+            alert("رویداد با موفقیت ثبت شد!");
+        }
+
+        function deleteEvent(eventId) {
+            if (confirm("آیا مطمئن هستید که می‌خواهید این رویداد را حذف کنید؟")) {
+                db.ref(`events/${eventId}`).remove();
+                loadEvents();
+            }
+        }
+    </script>
+</body>
+</html>
